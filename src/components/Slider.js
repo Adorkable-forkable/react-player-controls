@@ -53,6 +53,9 @@ function Slider ({
   onChange = noop,
   onChangeStart = noop,
   onChangeEnd = noop,
+  onHover = noop,
+  onHoverStart = noop,
+  onHoverEnd = noop,
   children = null,
   className = null,
   style = {},
@@ -60,15 +63,34 @@ function Slider ({
 }) {
   const $el = React.createRef()
   const bounds = () => $el.current.getBoundingClientRect()
+  const [isHovering, setIsHovering] = React.useState(false)
 
   const bind = useGesture(
     {
       onMoveStart: ({ dragging, xy }) => !dragging && onIntentStart(getSliderValue(bounds, direction, xy)),
-      onMove: ({ dragging, xy }) => !dragging && onIntent(getSliderValue(bounds, direction, xy)),
+      onMove: ({ dragging, xy }) => {
+        const value = getSliderValue(bounds, direction, xy)
+        !dragging && onIntent(value)
+        isHovering && onHover(value, true)
+      },
       onMoveEnd: ({ dragging }) => !dragging && onIntentEnd(),
       onDragStart: ({ xy }) => onChangeStart(getSliderValue(bounds, direction, xy)),
       onDrag: ({ xy }) => onChange(getSliderValue(bounds, direction, xy)),
       onDragEnd: ({ xy }) => onChangeEnd(getSliderValue(bounds, direction, xy)),
+      onHover: ({ xy, active }) => {
+        const value = getSliderValue(bounds, direction, xy)
+        if (!active) {
+          setIsHovering(false)
+
+          onHoverEnd(value)
+        } else if (!isHovering) {
+          setIsHovering(true)
+
+          onHoverStart(value)
+        }
+
+        onHover(value, active)
+      }
     },
     {
       axis: direction === Direction.HORIZONTAL ? 'x' : 'y',
@@ -111,6 +133,9 @@ Slider.propTypes = {
   onChange: PropTypes.func,
   onChangeStart: PropTypes.func,
   onChangeEnd: PropTypes.func,
+  onHover: PropTypes.func,
+  onHoverStart: PropTypes.func,
+  onHoverEnd: PropTypes.func,
   children: PropTypes.node,
   className: PropTypes.string,
   style: PropTypes.object,
